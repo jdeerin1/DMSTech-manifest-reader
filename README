@@ -1,0 +1,13 @@
+The libraries I use to run this are:
+arq-2.8.4.jar
+icu4j-3.4.4.jar
+iri-0.8.jar
+jena-2.6.3.jar
+log4j-1.2.13.jar
+saxon9-s9api.jar
+saxon9.jar
+slf4j-api-1.5.8.jar
+slf4j-log4j12-1.5.8.jar
+xercesImpl-2.7.1.jar
+
+You can test by running the jar in the download section, or running sequence.main
