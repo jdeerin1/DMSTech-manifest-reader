@@ -36,6 +36,21 @@ public class sequence {
 
     private canvas[] sequenceItems;
 
+    public String getCity() {
+        return city;
+    }
+
+    public String getCollection() {
+        return collection;
+    }
+
+    public String getRepository() {
+        return repository;
+    }
+    private String city;
+    private String collection;
+    private String repository;
+    
     public canvas[] getSequenceItems() {
         return sequenceItems;
     }
@@ -49,6 +64,9 @@ public class sequence {
 
     /**build a sequence object given the url of the graph serialization and its format*/
     public sequence(URL[] sequenceUrl, String format, int msID) throws IOException, SQLException {
+        city="";
+        collection="";
+        repository="";
         Model sequenceModel = ModelFactory.createDefaultModel();
         Stack<canvas> accumulator = new Stack();
         int positionCounter = 1;
@@ -71,6 +89,12 @@ public class sequence {
         String queryString = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:Sequence}";
         //Find the image annotation aggregation uri
         String queryString2 = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:ImageAnnotationList}";
+        //Find the tei metadata for the manuscript. Items are settlement, repository, and collection+idno (condensed into collection for our purposes)
+        String queryString3 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:settlement ?object }";
+        String queryString4 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:collection ?object }";
+        String queryString5 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:idno ?object }";
+        String queryString6 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:repository ?object }";
+        
         Query query = QueryFactory.create(queryString);
         QueryExecution qe = QueryExecutionFactory.create(query, sequenceModel);
         ResultSet results = qe.execSelect();
@@ -88,6 +112,44 @@ public class sequence {
             QuerySolution qs = results.next();
             ImgAnnoUrlString = qs.get("subject").toString();
         }
+        query = QueryFactory.create(queryString3);
+        qe = QueryExecutionFactory.create(query, sequenceModel);
+        results = qe.execSelect();
+        
+        if (results.hasNext()) {
+            QuerySolution qs = results.next();
+            city=qs.get("object").toString();
+        }
+        query = QueryFactory.create(queryString4);
+        qe = QueryExecutionFactory.create(query, sequenceModel);
+        results = qe.execSelect();
+        
+        if (results.hasNext()) {
+            QuerySolution qs = results.next();
+            collection=qs.get("object").toString();
+        }
+        
+        query = QueryFactory.create(queryString5);
+        qe = QueryExecutionFactory.create(query, sequenceModel);
+        results = qe.execSelect();
+        
+        if (results.hasNext()) {
+            QuerySolution qs = results.next();
+            collection+=" "+qs.get("object").toString();
+        }
+        
+        
+        query = QueryFactory.create(queryString6);
+        qe = QueryExecutionFactory.create(query, sequenceModel);
+        results = qe.execSelect();
+        
+        if (results.hasNext()) {
+            QuerySolution qs = results.next();
+            repository=qs.get("object").toString();
+        }
+        
+        
+        
         //if a location for the image annotations and the sequence was found, load them into a seperate graph
         if (m3UrlString.compareTo("") != 0 && ImgAnnoUrlString.compareTo("") != 0) {
             URL m3Url = new URL(m3UrlString + ".xml");
@@ -194,8 +256,11 @@ public class sequence {
     public static void main(String[] args) throws SQLException {
         try {
             URL[] urls = new URL[1];
-            urls[0] = new URL("http://dms-data.stanford.edu/Parker/198/Manifest.xml");
+            urls[0] = new URL("http://dms-data.stanford.edu/BnF/NAF6224/Manifest.xml");
             sequence s=new sequence(urls, "", 1);
+            //if city is populated, print shelfmark
+            if(s.getCity().compareTo("")!=0)
+            System.out.print("Shelfmark:"+s.city+", "+s.repository+", "+s.collection+"\n");
             canvas [] canvases=s.getSequenceItems();
             for(int i=0;i<canvases.length;i++)
             {
