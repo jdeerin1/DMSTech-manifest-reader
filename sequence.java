@@ -1,7 +1,16 @@
 /*
- * To change this template, choose Tools | Templates
- * and open the template in the editor.
+ * @author Jon Deering
+Copyright 2011 Saint Louis University. Licensed under the Educational Community License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License.
+
+You may obtain a copy of the License at http://www.osedu.org/licenses/ECL-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License for the specific language governing permissions
+and limitations under the License.
  */
+
+/**A sequence of canvases which represent a manuscript. */
 package DMSTech;
 
 import com.hp.hpl.jena.graph.Node;
@@ -31,7 +40,6 @@ import java.util.Stack;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 public class sequence {
 
     private canvas[] sequenceItems;
@@ -50,7 +58,7 @@ public class sequence {
     private String city;
     private String collection;
     private String repository;
-    
+
     public canvas[] getSequenceItems() {
         return sequenceItems;
     }
@@ -64,9 +72,9 @@ public class sequence {
 
     /**build a sequence object given the url of the graph serialization and its format*/
     public sequence(URL[] sequenceUrl, String format, int msID) throws IOException, SQLException {
-        city="";
-        collection="";
-        repository="";
+        city = "";
+        collection = "";
+        repository = "";
         Model sequenceModel = ModelFactory.createDefaultModel();
         Stack<canvas> accumulator = new Stack();
         int positionCounter = 1;
@@ -87,7 +95,7 @@ public class sequence {
         }
         //this query finds sequence
         String queryString = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:Sequence}";
-        
+
         //Find the image annotation aggregation uri
         String queryString2 = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:ImageAnnotationList}";
         //Find the tei metadata for the manuscript. Items are settlement, repository, and collection+idno (condensed into collection for our purposes)
@@ -95,7 +103,7 @@ public class sequence {
         String queryString4 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:collection ?object }";
         String queryString5 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:idno ?object }";
         String queryString6 = "prefix tei:<http://www.tei-c.org/ns/1.0/> select ?sub ?object WHERE{ ?sub tei:repository ?object }";
-        
+
         Query query = QueryFactory.create(queryString);
         QueryExecution qe = QueryExecutionFactory.create(query, sequenceModel);
         ResultSet results = qe.execSelect();
@@ -104,17 +112,16 @@ public class sequence {
         while (results.hasNext()) {
             QuerySolution qs = results.next();
             m3UrlString = qs.get("subject").toString();
-            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <"+m3UrlString+"> ore:isDescribedBy ?object}";
-                  query = QueryFactory.create(resourceQueryString);
-        qe = QueryExecutionFactory.create(query, sequenceModel);
-        results = qe.execSelect();
-        //now find where the normal sequence actually resides
-        if(results.hasNext())
-        {
-            qs=results.next();
-            m3UrlString=qs.get("object").toString();
-        }
-  
+            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <" + m3UrlString + "> ore:isDescribedBy ?object}";
+            query = QueryFactory.create(resourceQueryString);
+            qe = QueryExecutionFactory.create(query, sequenceModel);
+            results = qe.execSelect();
+            //now find where the normal sequence actually resides
+            if (results.hasNext()) {
+                qs = results.next();
+                m3UrlString = qs.get("object").toString();
+            }
+
         }
         query = QueryFactory.create(queryString2);
         qe = QueryExecutionFactory.create(query, sequenceModel);
@@ -126,56 +133,55 @@ public class sequence {
             //this is the uri of the image annotation list
             ImgAnnoUrlString = qs.get("subject").toString();
             //now find the associated resource
-            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <"+ImgAnnoUrlString+"> ore:isDescribedBy ?object}";
+            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <" + ImgAnnoUrlString + "> ore:isDescribedBy ?object}";
             query = QueryFactory.create(resourceQueryString);
-            qe =QueryExecutionFactory.create(query, sequenceModel);
-            results=qe.execSelect();
-            if(results.hasNext())
-            {
-                qs=results.next();
+            qe = QueryExecutionFactory.create(query, sequenceModel);
+            results = qe.execSelect();
+            if (results.hasNext()) {
+                qs = results.next();
                 ImgAnnoUrlString = qs.get("object").toString();
-                
+
             }
-                
+
         }
         query = QueryFactory.create(queryString3);
         qe = QueryExecutionFactory.create(query, sequenceModel);
         results = qe.execSelect();
-        
+
         if (results.hasNext()) {
             QuerySolution qs = results.next();
-            city=qs.get("object").toString();
+            city = qs.get("object").toString();
         }
         query = QueryFactory.create(queryString4);
         qe = QueryExecutionFactory.create(query, sequenceModel);
         results = qe.execSelect();
-        
+
         if (results.hasNext()) {
             QuerySolution qs = results.next();
-            collection=qs.get("object").toString();
+            collection = qs.get("object").toString();
         }
-        
+
         query = QueryFactory.create(queryString5);
         qe = QueryExecutionFactory.create(query, sequenceModel);
         results = qe.execSelect();
-        
+
         if (results.hasNext()) {
             QuerySolution qs = results.next();
-            collection+=" "+qs.get("object").toString();
+            collection += " " + qs.get("object").toString();
         }
-        
-        
+
+
         query = QueryFactory.create(queryString6);
         qe = QueryExecutionFactory.create(query, sequenceModel);
         results = qe.execSelect();
-        
+
         if (results.hasNext()) {
             QuerySolution qs = results.next();
-            repository=qs.get("object").toString();
+            repository = qs.get("object").toString();
         }
-        
-        
-        
+
+
+
         //if a location for the image annotations and the sequence was found, load them into a seperate graph
         if (m3UrlString.compareTo("") != 0 && ImgAnnoUrlString.compareTo("") != 0) {
             URL m3Url = new URL(m3UrlString);
@@ -187,10 +193,11 @@ public class sequence {
             m3connection.setDoOutput(true);
             m3connection.setReadTimeout(10000);
             m3connection.connect();
-            if(m3UrlString.toLowerCase().endsWith("n3"))
-                format="N3";
-            else
-                format="";
+            if (m3UrlString.toLowerCase().endsWith("n3")) {
+                format = "N3";
+            } else {
+                format = "";
+            }
             Model m3Model = ModelFactory.createDefaultModel();
             BufferedReader m3Reader = null;
             m3Reader = new BufferedReader(new InputStreamReader(m3connection.getInputStream()));
@@ -203,10 +210,11 @@ public class sequence {
             m3connection.connect();
             m3Reader = new BufferedReader(new InputStreamReader(m3connection.getInputStream()));
             sequenceModel = ModelFactory.createDefaultModel();
-            if(ImgAnnoUrlString.toLowerCase().endsWith("n3"))
-                format="N3";
-            else
-                format="";
+            if (ImgAnnoUrlString.toLowerCase().endsWith("n3")) {
+                format = "N3";
+            } else {
+                format = "";
+            }
             sequenceModel.read(m3Reader, null, format);
             //find the sequence list (which in jena is a jena list) to get the canvases in order. 
             queryString = "prefix rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> select * where{   ?subject list:member ?obj}"; //<http://www.w3.org/1999/02/22-rdf-syntax-ns#first>  ?predicate}";
@@ -290,21 +298,20 @@ public class sequence {
     public static void main(String[] args) throws SQLException {
         try {
             URL[] urls = new URL[1];
-            urls[0] = new URL("http://dms-data.stanford.edu/BnF/NAF6224/Manifest.xml");
-            sequence s=new sequence(urls, "", 1);
+            urls[0] = new URL("http://www.shared-canvas.org/impl/demo4/res/W165/Manifest.xml");
+            sequence s = new sequence(urls, "", 1);
             //if city is populated, print shelfmark
-            if(s.getCity().compareTo("")!=0)
-            System.out.print("Shelfmark:"+s.city+", "+s.repository+", "+s.collection+"\n");
-            canvas [] canvases=s.getSequenceItems();
-            for(int i=0;i<canvases.length;i++)
-            {
-                System.out.print("Position:"+canvases[i].getPosition()+"\n");
-                System.out.print("Title:"+canvases[i].getTitle()+"\n");
-                System.out.print("Canvas:"+canvases[i].getCanvas()+"\n");
-                ImageChoice [] images=canvases[i].getImageURL();
-                for(int c=0;c<images.length;c++)
-                {
-                System.out.print("Image:"+images[c].getImageURL()+"\n");
+            if (s.getCity().compareTo("") != 0) {
+                System.out.print("Shelfmark:" + s.city + ", " + s.repository + ", " + s.collection + "\n");
+            }
+            canvas[] canvases = s.getSequenceItems();
+            for (int i = 0; i < canvases.length; i++) {
+                System.out.print("Position:" + canvases[i].getPosition() + "\n");
+                System.out.print("Title:" + canvases[i].getTitle() + "\n");
+                System.out.print("Canvas:" + canvases[i].getCanvas() + "\n");
+                ImageChoice[] images = canvases[i].getImageURL();
+                for (int c = 0; c < images.length; c++) {
+                    System.out.print("Image:" + images[c].getImageURL() + "\n");
                 }
             }
         } catch (IOException ex) {
