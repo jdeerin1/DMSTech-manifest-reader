@@ -87,6 +87,7 @@ public class sequence {
         }
         //this query finds sequence
         String queryString = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:Sequence}";
+        
         //Find the image annotation aggregation uri
         String queryString2 = "prefix dms:<http://dms.stanford.edu/ns/> select ?subject ?predicate WHERE{?subject ?predicate dms:ImageAnnotationList}";
         //Find the tei metadata for the manuscript. Items are settlement, repository, and collection+idno (condensed into collection for our purposes)
@@ -99,9 +100,21 @@ public class sequence {
         QueryExecution qe = QueryExecutionFactory.create(query, sequenceModel);
         ResultSet results = qe.execSelect();
         String m3UrlString = "";
+        //find the uri for the normal sequence
         while (results.hasNext()) {
             QuerySolution qs = results.next();
             m3UrlString = qs.get("subject").toString();
+            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <"+m3UrlString+"> ore:isDescribedBy ?object}";
+                  query = QueryFactory.create(resourceQueryString);
+        qe = QueryExecutionFactory.create(query, sequenceModel);
+        results = qe.execSelect();
+        //now find where the normal sequence actually resides
+        if(results.hasNext())
+        {
+            qs=results.next();
+            m3UrlString=qs.get("object").toString();
+        }
+  
         }
         query = QueryFactory.create(queryString2);
         qe = QueryExecutionFactory.create(query, sequenceModel);
@@ -110,7 +123,20 @@ public class sequence {
         if (results.hasNext()) {
 
             QuerySolution qs = results.next();
+            //this is the uri of the image annotation list
             ImgAnnoUrlString = qs.get("subject").toString();
+            //now find the associated resource
+            String resourceQueryString = "prefix ore:<http://www.openarchives.org/ore/terms/> select ?object  WHERE{ <"+ImgAnnoUrlString+"> ore:isDescribedBy ?object}";
+            query = QueryFactory.create(resourceQueryString);
+            qe =QueryExecutionFactory.create(query, sequenceModel);
+            results=qe.execSelect();
+            if(results.hasNext())
+            {
+                qs=results.next();
+                ImgAnnoUrlString = qs.get("object").toString();
+                
+            }
+                
         }
         query = QueryFactory.create(queryString3);
         qe = QueryExecutionFactory.create(query, sequenceModel);
@@ -152,8 +178,8 @@ public class sequence {
         
         //if a location for the image annotations and the sequence was found, load them into a seperate graph
         if (m3UrlString.compareTo("") != 0 && ImgAnnoUrlString.compareTo("") != 0) {
-            URL m3Url = new URL(m3UrlString + ".xml");
-            URL imgAnnoURL = new URL(ImgAnnoUrlString + ".xml");
+            URL m3Url = new URL(m3UrlString);
+            URL imgAnnoURL = new URL(ImgAnnoUrlString);
             HttpURLConnection m3connection = null;
             m3connection = (HttpURLConnection) m3Url.openConnection();
             m3connection.setRequestMethod("GET");
@@ -161,6 +187,10 @@ public class sequence {
             m3connection.setDoOutput(true);
             m3connection.setReadTimeout(10000);
             m3connection.connect();
+            if(m3UrlString.toLowerCase().endsWith("n3"))
+                format="N3";
+            else
+                format="";
             Model m3Model = ModelFactory.createDefaultModel();
             BufferedReader m3Reader = null;
             m3Reader = new BufferedReader(new InputStreamReader(m3connection.getInputStream()));
@@ -173,6 +203,10 @@ public class sequence {
             m3connection.connect();
             m3Reader = new BufferedReader(new InputStreamReader(m3connection.getInputStream()));
             sequenceModel = ModelFactory.createDefaultModel();
+            if(ImgAnnoUrlString.toLowerCase().endsWith("n3"))
+                format="N3";
+            else
+                format="";
             sequenceModel.read(m3Reader, null, format);
             //find the sequence list (which in jena is a jena list) to get the canvases in order. 
             queryString = "prefix rdf:<http://www.w3.org/1999/02/22-rdf-syntax-ns#> PREFIX list: <http://jena.hpl.hp.com/ARQ/list#> select * where{   ?subject list:member ?obj}"; //<http://www.w3.org/1999/02/22-rdf-syntax-ns#first>  ?predicate}";
