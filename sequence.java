@@ -231,10 +231,30 @@ public class sequence {
                 Query innerQuery = QueryFactory.create("select  ?pred where { <" + r.getURI() + "> " + "<http://purl.org/dc/elements/1.1/title> ?pred}");
                 qe = QueryExecutionFactory.create(innerQuery, m3Model);
                 ResultSet innerResults = qe.execSelect();
+                String title="";
                 while (innerResults.hasNext()) {
                     QuerySolution qs2 = innerResults.next();
                     //canvas title
-                    String title = qs2.get("pred").toString();
+                    title = qs2.get("pred").toString();
+                }
+                innerQuery = QueryFactory.create("prefix exif:<http://www.w3.org/2003/12/exif/ns#> select  ?pred  where {  <" + r.getURI() + "> " + "exif:width ?pred}");
+                qe = QueryExecutionFactory.create(innerQuery, m3Model);
+                innerResults = qe.execSelect();
+                String canvasWidth="";
+                while (innerResults.hasNext()) {
+                    QuerySolution qs2 = innerResults.next();
+                    //canvas title
+                    canvasWidth = qs2.get("pred").toString().split("\\^")[0];
+                }
+                innerQuery = QueryFactory.create("prefix exif:<http://www.w3.org/2003/12/exif/ns#> select  ?pred where { <" + r.getURI() + "> " + "exif:height ?pred}");
+                qe = QueryExecutionFactory.create(innerQuery, m3Model);
+                innerResults = qe.execSelect();
+                String canvasHeight="";
+                while (innerResults.hasNext()) {
+                    QuerySolution qs2 = innerResults.next();
+                    //canvas title
+                    canvasHeight = qs2.get("pred").toString().split("\\^")[0];
+                }
                     //find anything that has the canvas as a target. Should find an image annotation.
                     Query innerQuery3 = QueryFactory.create("select ?sub  where { ?sub <http://www.openannotation.org/ns/hasTarget> <" + r.getURI() + "> }");
                     qe = QueryExecutionFactory.create(innerQuery3, sequenceModel);
@@ -256,7 +276,63 @@ public class sequence {
                             //it is an imagebody
                             if (innerResults4.hasNext()) {
                                 innerqs4 = innerResults4.next();
-                                canvas tmp = new canvas(canvas, title, new ImageChoice[]{new ImageChoice(img, 0, 0)}, positionCounter);
+                                int cwidth=0;
+                                int cheight=0;
+                                if(canvasWidth.compareTo("")!=0)
+                                {
+                                    try{
+                                        cwidth=Integer.parseInt(canvasWidth);
+                                    }
+                                    catch(NumberFormatException e)
+                                    {
+                                        //just leave it as 0
+                                    }
+                                }
+                                if(canvasHeight.compareTo("")!=0)
+                                {
+                                    try{
+                                        cheight=Integer.parseInt(canvasHeight);
+                                    }
+                                    catch(NumberFormatException e)
+                                    {
+                                        //just leave it as 0
+                                    }
+                                }
+                                innerQuery = QueryFactory.create("prefix exif:<http://www.w3.org/2003/12/exif/ns#> select  ?obj where { <" + img + "> " + " exif:height ?obj  }");
+                qe = QueryExecutionFactory.create(innerQuery, sequenceModel);
+                innerResults = qe.execSelect();
+                String imageHeight="";
+                
+                while (innerResults.hasNext()) {
+                    QuerySolution qs2 = innerResults.next();
+                    imageHeight = qs2.get("obj").toString().split("\\^")[0];
+                    
+                }
+                int imgHeight=0;
+                try{
+                 imgHeight=Integer.parseInt(imageHeight)   ;
+                }
+                catch(NumberFormatException e)
+                {
+                }
+                        innerQuery = QueryFactory.create("prefix exif:<http://www.w3.org/2003/12/exif/ns#> select  ?obj where { <" + img + "> " + " exif:width ?obj  }");
+                qe = QueryExecutionFactory.create(innerQuery, sequenceModel);
+                innerResults = qe.execSelect();
+                String imageWidth="";
+                
+                while (innerResults.hasNext()) {
+                    QuerySolution qs2 = innerResults.next();
+                    imageWidth = qs2.get("obj").toString().split("\\^")[0];
+                }
+                int imgWidth=0;
+                try{
+                 imgWidth=Integer.parseInt(imageWidth)   ;
+                }
+                catch(NumberFormatException e)
+                {
+                }
+                
+                                canvas tmp = new canvas(canvas, title, new ImageChoice[]{new ImageChoice(img, imgWidth,imgHeight )}, positionCounter,cwidth,cheight);
                                 accumulator.push(tmp);
                                 positionCounter++;
                             } else {
@@ -277,12 +353,34 @@ public class sequence {
                                     imgAnnos[ctr] = imgs.pop();
                                     ctr++;
                                 }
+                                int cwidth=0;
+                                int cheight=0;
+                                if(canvasWidth.compareTo("")!=0)
+                                {
+                                    try{
+                                        cwidth=Integer.parseInt(canvasWidth);
+                                    }
+                                    catch(NumberFormatException e)
+                                    {
+                                        //just leave it as 0
+                                    }
+                                }
+                                if(canvasHeight.compareTo("")!=0)
+                                {
+                                    try{
+                                        cheight=Integer.parseInt(canvasHeight);
+                                    }
+                                    catch(NumberFormatException e)
+                                    {
+                                        //just leave it as 0
+                                    }
+                                }
                                 //now build a canvas with all of those images associated
-                                canvas tmp = new canvas(canvas, title, imgAnnos, positionCounter);
+                                canvas tmp = new canvas(canvas, title, imgAnnos, positionCounter,cwidth,cheight);
                                 accumulator.push(tmp);
                                 positionCounter++;
                             }
-                        }
+                        
                     }
                 }
             }
@@ -298,7 +396,9 @@ public class sequence {
     public static void main(String[] args) throws SQLException {
         try {
             URL[] urls = new URL[1];
-            urls[0] = new URL("http://www.shared-canvas.org/impl/demo4/res/W165/Manifest.xml");
+            //urls[0] = new URL("http://www.shared-canvas.org/impl/demo4/res/W165/Manifest.xml");
+            urls[0] = new URL("http://dms-data.stanford.edu/BnF/NAF6224/Manifest.xml");
+            
             sequence s = new sequence(urls, "", 1);
             //if city is populated, print shelfmark
             if (s.getCity().compareTo("") != 0) {
@@ -308,10 +408,10 @@ public class sequence {
             for (int i = 0; i < canvases.length; i++) {
                 System.out.print("Position:" + canvases[i].getPosition() + "\n");
                 System.out.print("Title:" + canvases[i].getTitle() + "\n");
-                System.out.print("Canvas:" + canvases[i].getCanvas() + "\n");
+                System.out.print("Canvas:" + canvases[i].getCanvas() +" w:"+canvases[i].getWidth()+" h:"+canvases[i].getHeight()+ "\n");
                 ImageChoice[] images = canvases[i].getImageURL();
                 for (int c = 0; c < images.length; c++) {
-                    System.out.print("Image:" + images[c].getImageURL() + "\n");
+                    System.out.print("Image:" + images[c].getImageURL() +" w:"+images[c].getWidth()+" h:"+images[c].getHeight()+ "\n");
                 }
             }
         } catch (IOException ex) {

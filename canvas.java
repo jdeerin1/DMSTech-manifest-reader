@@ -36,11 +36,32 @@ public class canvas {
     private String title;
     private ImageChoice[] imageURL;
     private int position;
+    private int height;
+    private int width;
+
+    public int getHeight() {
+        return height;
+    }
+
+    public int getWidth() {
+        return width;
+    }
     public canvas(String canvas, String title, ImageChoice[] img,int position)
     {
         this.canvas=canvas;
         this.title=title;
         this.imageURL=img;
         this.position=position;
+        height=0;
+        width=0;
+    }
+    public canvas(String canvas, String title, ImageChoice[] img,int position, int width, int height)
+    {
+        this.canvas=canvas;
+        this.title=title;
+        this.imageURL=img;
+        this.position=position;
+        this.width=width;
+        this.height=height;
     }
 }

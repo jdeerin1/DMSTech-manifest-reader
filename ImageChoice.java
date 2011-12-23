@@ -28,7 +28,7 @@ public class ImageChoice {
     private int height;
     private int width;
     private String imageURL;
-    public ImageChoice(String imageURL, int h, int w)
+    public ImageChoice(String imageURL,  int w, int h)
     {
         this.height=h;
         this.width=w;
